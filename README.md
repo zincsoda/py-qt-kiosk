@@ -21,7 +21,7 @@ nano ~/.config/lxsession/LXDE-pi/autostart
 Add call to your script:
 
 ```
-<path_to>/clock.py
+python3 <path_to>/clock.py
 ```
 
 Recommend adding following lines also if not already there
