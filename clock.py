@@ -8,12 +8,15 @@ import fcntl
 import struct
 import subprocess
 
-CLOCK_FONT_SIZE = 100
-FOOTER_FONT_SIZE = 10
-RUN_ON_PI = True
+RUN_ON_PI = False
 
+if RUN_ON_PI:
+    CLOCK_FONT_SIZE = 100
+    FOOTER_FONT_SIZE = 10
+else:
+    CLOCK_FONT_SIZE = 300
+    FOOTER_FONT_SIZE = 50
 
-# raspian
 def get_wlan_ipaddress():
     # Get the network interface associated with WiFi
     ifname = 'wlan0'  # This assumes your WiFi interface is named 'wlan0'
@@ -30,7 +33,6 @@ def get_en0_ipaddress():
     ip_address = subprocess.check_output(['ipconfig', 'getifaddr', 'en0']).decode().strip()
     return ip_address
 
-
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -39,9 +41,13 @@ class MainWindow(QWidget):
 
     def initUI(self):
 
+        self.createHeaderLabel()
         self.createClockLabel()
         self.createIPAddressLabel()
         self.createCountDownLabel()
+
+        header_layout = QHBoxLayout()
+        header_layout.addWidget(self.header_label)
 
         footer_layout = QHBoxLayout()
         footer_layout.addWidget(self.countdown_label)
@@ -49,6 +55,7 @@ class MainWindow(QWidget):
         footer_layout.addWidget(self.ip_label)
 
         layout = QVBoxLayout()
+        layout.addLayout(header_layout)
         layout.addWidget(self.clockLabel, 1)
         layout.addLayout(footer_layout)  
         self.setLayout(layout)
@@ -76,6 +83,19 @@ class MainWindow(QWidget):
         self.timer.timeout.connect(self.update_clock)
         self.timer.start(1000)
 
+
+    def createHeaderLabel(self):
+        self.header_label = QLabel(self)
+        self.header_label.setText("There are no bad pictures - thats just how your face looks sometimes")
+        self.header_label.setStyleSheet('color: lightblue')
+        self.header_label.setWordWrap(True)
+        self.header_label.setAlignment(Qt.AlignCenter)
+        self.header_label.resize(100, 20)
+
+        font = self.header_label.font() # get the current font
+        font.setPointSize(FOOTER_FONT_SIZE)
+        self.header_label.setFont(font)
+
     def createIPAddressLabel(self):
         self.ip_label = QLabel(self)
         if RUN_ON_PI:
@@ -83,24 +103,27 @@ class MainWindow(QWidget):
         else:
             ip_address = get_en0_ipaddress()
         self.ip_label.setText(ip_address)
-        self.ip_label.setStyleSheet('color: white')
+        self.ip_label.setStyleSheet('color: pink')
         font = self.ip_label.font() # get the current font
         font.setPointSize(FOOTER_FONT_SIZE)
         self.ip_label.setFont(font)
 
     def createCountDownLabel(self):
         self.countdown_label = QLabel("...",self)
-        self.countdown_label.setStyleSheet('color: white')
+        self.countdown_label.setStyleSheet('color: green')
         font = self.countdown_label.font() # get the current font
         font.setPointSize(FOOTER_FONT_SIZE)
         self.countdown_label.setFont(font)
-        self.end_time = QDateTime(2023, 5, 11, 19, 0)  # May 11th 2023, 7pm
+        self.end_time = QDateTime(2023, 9, 15, 9, 0)  # May 11th 2023, 7pm
 
     def update_clock(self):
         # Get the current time and display it on the label
         current_clock_time = QTime.currentTime()
         current_time_text = current_clock_time.toString("hh:mm:ss")
         self.clockLabel.setText(current_time_text)
+
+        # Check for discord message
+        self.checkForMessage()
 
         # Update countdown timere
         current_date_time = QDateTime.currentDateTime()
@@ -115,6 +138,12 @@ class MainWindow(QWidget):
 
             self.countdown_label.setText("{} days,  {} hrs,  {} mins,  {} secs".format(
                 days_left, time.toString('hh'), time.toString('mm'), time.toString('ss')))
+
+    def checkForMessage(self):
+        f = open("message.txt", "r")
+        message = f.readline()
+        self.header_label.setText(message)
+        f.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
