@@ -12,7 +12,7 @@ async def on_ready():
     
 @client.event
 async def on_message(message):
-    my_dev_channel = client.get_channel(972378842494824488)
+    my_dev_channel = client.get_channel(discord_config.my_dev_channel)
     if message.author == client.user:
         return
 
