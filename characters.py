@@ -9,12 +9,13 @@ import struct
 import subprocess
 import csv
 import random
+import os
 
-RUN_ON_PI = False
+RUN_ON_PI = True
 
 if RUN_ON_PI:
     CLOCK_FONT_SIZE = 100
-    FOOTER_FONT_SIZE = 10
+    FOOTER_FONT_SIZE = 25
 else:
     CLOCK_FONT_SIZE = 300
     FOOTER_FONT_SIZE = 50
@@ -77,7 +78,7 @@ class MainWindow(QWidget):
         self.setCursor(Qt.BlankCursor)
 
     def read_csv_chars(self):
-        file_path = "input.csv"
+        file_path = os.path.dirname(__file__) + "/" + "input.csv"
         with open(file_path, 'r') as csv_file:
             csv_reader = csv.reader(csv_file)
             for row in csv_reader:
@@ -143,7 +144,7 @@ class MainWindow(QWidget):
         self.frame_label.setText(current_frame)
 
     def checkForMessage(self):
-        f = open("message.txt", "r")
+        f = open(os.path.dirname(__file__) + "/" +  "message.txt", "r")
         message = f.readline()
         self.header_label.setText(message)
         f.close()
