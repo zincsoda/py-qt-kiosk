@@ -14,7 +14,7 @@ import os
 RUN_ON_PI = True
 
 if RUN_ON_PI:
-    CLOCK_FONT_SIZE = 200
+    CLOCK_FONT_SIZE = 150
     FOOTER_FONT_SIZE = 45
 else:
     CLOCK_FONT_SIZE = 300
