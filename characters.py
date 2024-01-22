@@ -78,12 +78,12 @@ class MainWindow(QWidget):
         self.setCursor(Qt.BlankCursor)
 
     def read_csv_chars(self):
-        file_path = os.path.dirname(__file__) + "/" + "input.csv"
-        with open(file_path, 'r') as csv_file:
-            csv_reader = csv.reader(csv_file)
-            for row in csv_reader:
-                tup = (row[0], row[1])
-                self.characters.append(tup)
+        f = open(os.path.dirname(__file__) + "/" +  "input.csv", "r")
+        csv_reader = csv.reader(f)
+        for row in csv_reader:
+            tup = (row[0], row[1])
+            self.characters.append(tup)
+        f.close()
 
     def createcharacter_label(self):
         self.character_label = QLabel('', self)
