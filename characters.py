@@ -145,7 +145,8 @@ class MainWindow(QWidget):
         self.frame_label.setText(current_frame)
 
     def checkForMessage(self):
-        f = open(os.path.dirname(__file__) + "/" +  "message.txt", "r")
+        dirname = os.path.dirname(__file__) or '.'
+        f = open(dirname + "/" +  "message.txt", "r")
         message = f.readline()
         self.header_label.setText(message)
         f.close()
