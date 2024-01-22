@@ -78,7 +78,8 @@ class MainWindow(QWidget):
         self.setCursor(Qt.BlankCursor)
 
     def read_csv_chars(self):
-        f = open(os.path.dirname(__file__) + "/" +  "input.csv", "r")
+        dirname = os.path.dirname(__file__) or '.'
+        f = open(dirname + "/" +  "input.csv", "r")
         csv_reader = csv.reader(f)
         for row in csv_reader:
             tup = (row[0], row[1])
