@@ -15,7 +15,7 @@ chmod +x clock.py
 3. Add script to LXDE autostart file
 
 ```
-nano ~/.config/lxsession/LXDE-pi/autostart
+vi ~/.config/lxsession/LXDE-pi/autostart
 ```
 
 Add call to your script:
