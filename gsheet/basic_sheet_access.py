@@ -1,6 +1,6 @@
 import gspread
 
-gc = gspread.service_account(filename='credentials.json')
+gc = gspread.service_account(filename='service_account.json')
 
 # Open the Google Sheet by its title
 sheet_title = 'Hanzi'
