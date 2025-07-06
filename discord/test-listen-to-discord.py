@@ -1,5 +1,5 @@
 import discord
-import discord_config
+import discord.discord_config as discord_config
 
 
 intents = discord.Intents.default()
