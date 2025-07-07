@@ -11,7 +11,7 @@ import csv
 import random
 import os
 
-RUN_ON_PI = True
+RUN_ON_PI = False
 
 if RUN_ON_PI:
     CLOCK_FONT_SIZE = 130
@@ -79,7 +79,7 @@ class MainWindow(QWidget):
 
     def read_csv_chars(self):
         dirname = os.path.dirname(__file__) or '.'
-        f = open(dirname + "/" +  "input.csv", "r")
+        f = open(dirname + "/" +  "characters.csv", "r")
         csv_reader = csv.reader(f)
         for row in csv_reader:
             tup = (row[0], row[1])
@@ -114,10 +114,13 @@ class MainWindow(QWidget):
 
     def createIPAddressLabel(self):
         self.ip_label = QLabel(self)
-        if RUN_ON_PI:
-            ip_address = get_wlan_ipaddress()
-        else:
-            ip_address = get_en0_ipaddress()
+        try:
+            if RUN_ON_PI:
+                ip_address = get_wlan_ipaddress()
+            else:
+                ip_address = get_en0_ipaddress()
+        except:
+            ip_address = "127.0.0.1"  # fallback to localhost
         self.ip_label.setText(ip_address)
         self.ip_label.setStyleSheet('color: pink')
         font = self.ip_label.font() # get the current font
