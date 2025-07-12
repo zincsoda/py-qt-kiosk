@@ -36,6 +36,7 @@ else:
 CHARACTERS_FILE = "characters.csv"
 MESSAGE_FILE = "message.txt"
 CHARACTER_UPDATE_INTERVAL = 10000  # 10 seconds
+COUNTDOWN_INTERVAL = 1000  # 1 second for countdown updates
 DEFAULT_HEADER_TEXT = "" #There are no bad pictures - thats just how your face looks sometimes"
 
 
@@ -76,16 +77,18 @@ class CharacterDisplay(QWidget):
         self.callback_done = threading.Event()
         self.characters: List[Tuple[str, str]] = []
         self.current_index: int = 0
+        self.countdown_seconds: int = CHARACTER_UPDATE_INTERVAL // 1000
         
         self._load_characters()
         self._init_ui()
-        self._setup_timer()
+        self._setup_timers()
         self._update_character()
 
     def _init_ui(self):
         """Initialize the user interface."""
         self._create_header_label()
         self._create_character_label()
+        self._create_countdown_label()
         self._create_ip_address_label()
         self._create_frame_label()
         self._setup_layout()
@@ -99,6 +102,7 @@ class CharacterDisplay(QWidget):
         footer_layout = QHBoxLayout()
         footer_layout.addWidget(self.frame_label)
         footer_layout.addStretch()
+        footer_layout.addWidget(self.countdown_label)
         footer_layout.addWidget(self.ip_label)
 
         main_layout = QVBoxLayout()
@@ -120,11 +124,15 @@ class CharacterDisplay(QWidget):
         self.setStyleSheet("background-color: black;")
         self.setCursor(Qt.BlankCursor)
 
-    def _setup_timer(self):
-        """Setup timer for character updates."""
+    def _setup_timers(self):
+        """Setup timers for character updates and countdown."""
+        # Single timer for both character updates and countdown
         self.timer = QTimer()
-        self.timer.timeout.connect(self._update_character)
-        self.timer.start(CHARACTER_UPDATE_INTERVAL)
+        self.timer.timeout.connect(self._update_countdown)
+        self.timer.start(COUNTDOWN_INTERVAL)
+        
+        # Initialize countdown
+        self.countdown_seconds = CHARACTER_UPDATE_INTERVAL // 1000
 
     def _load_characters(self):
         """Load characters from CSV file."""
@@ -164,6 +172,15 @@ class CharacterDisplay(QWidget):
         self.character_label.setFont(font)
         self.character_label.setStyleSheet('color: white')
 
+    def _create_countdown_label(self):
+        """Create and configure the countdown label."""
+        self.countdown_label = QLabel(self)
+        self.countdown_label.setText(f"{self.countdown_seconds}s")
+        self.countdown_label.setStyleSheet('color: yellow')
+        font = self.countdown_label.font()
+        font.setPointSize(FOOTER_FONT_SIZE)
+        self.countdown_label.setFont(font)
+
     def _create_ip_address_label(self):
         """Create and configure the IP address label."""
         self.ip_label = QLabel(self)
@@ -181,6 +198,16 @@ class CharacterDisplay(QWidget):
         font.setPointSize(FOOTER_FONT_SIZE)
         self.frame_label.setFont(font)
         self.end_time = QDateTime(2024, 9, 15, 9, 0)
+
+    def _update_countdown(self):
+        """Update the countdown display."""
+        self.countdown_seconds -= 1
+        self.countdown_label.setText(f"{self.countdown_seconds}s")
+        
+        # When countdown reaches 0, update character and reset countdown
+        if self.countdown_seconds <= 0:
+            self._update_character()
+            self.countdown_seconds = CHARACTER_UPDATE_INTERVAL // 1000
 
     def _update_character(self):
         """Update the displayed character and check for new messages."""
