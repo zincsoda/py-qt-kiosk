@@ -8,7 +8,7 @@ support for Discord message integration and network status display.
 
 import sys
 import os
-import csv
+import json
 import random
 import threading
 import time
@@ -16,7 +16,7 @@ import socket
 import fcntl
 import struct
 import subprocess
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from PyQt5.QtCore import Qt, QTimer, QDateTime
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
@@ -33,7 +33,7 @@ else:
     FOOTER_FONT_SIZE = 50
 
 # Constants
-CHARACTERS_FILE = "characters.csv"
+FLASHCARDS_FILE = "flashcards.json"
 MESSAGE_FILE = "message.txt"
 CHARACTER_UPDATE_INTERVAL = 10000  # 10 seconds
 COUNTDOWN_INTERVAL = 1000  # 1 second for countdown updates
@@ -75,11 +75,11 @@ class CharacterDisplay(QWidget):
     def __init__(self):
         super().__init__()
         self.callback_done = threading.Event()
-        self.characters: List[Tuple[str, str]] = []
+        self.flashcards: List[Dict[str, str]] = []
         self.current_index: int = 0
         self.countdown_seconds: int = CHARACTER_UPDATE_INTERVAL // 1000
         
-        self._load_characters()
+        self._load_flashcards()
         self._init_ui()
         self._setup_timers()
         self._update_character()
@@ -134,21 +134,18 @@ class CharacterDisplay(QWidget):
         # Initialize countdown
         self.countdown_seconds = CHARACTER_UPDATE_INTERVAL // 1000
 
-    def _load_characters(self):
-        """Load characters from CSV file."""
+    def _load_flashcards(self):
+        """Load flashcards from JSON file."""
         dirname = os.path.dirname(__file__) or '.'
-        csv_path = os.path.join(dirname, CHARACTERS_FILE)
+        json_path = os.path.join(dirname, FLASHCARDS_FILE)
         
         try:
-            with open(csv_path, "r", encoding='utf-8') as f:
-                csv_reader = csv.reader(f)
-                for row in csv_reader:
-                    if len(row) >= 2:
-                        self.characters.append((row[0], row[1]))
+            with open(json_path, "r", encoding='utf-8') as f:
+                self.flashcards = json.load(f)
         except FileNotFoundError:
-            print(f"Warning: {CHARACTERS_FILE} not found")
+            print(f"Warning: {FLASHCARDS_FILE} not found")
         except Exception as e:
-            print(f"Error loading characters: {e}")
+            print(f"Error loading flashcards: {e}")
 
     def _create_header_label(self):
         """Create and configure the header label."""
@@ -231,15 +228,17 @@ class CharacterDisplay(QWidget):
             print(f"Error reading message file: {e}")
 
     def _display_random_character(self):
-        """Display a random character from the loaded list."""
-        if not self.characters:
+        """Display a random character from the loaded flashcards."""
+        if not self.flashcards:
             return
             
-        self.current_index = random.randrange(len(self.characters))
-        current_frame, current_character = self.characters[self.current_index]
+        self.current_index = random.randrange(len(self.flashcards))
+        current_flashcard = self.flashcards[self.current_index]
         
-        self.character_label.setText(current_character)
-        self.frame_label.setText(current_frame)
+        # Display the hanzi character
+        self.character_label.setText(current_flashcard.get("Hanzi", ""))
+        # Display the pinyin in the frame label
+        self.frame_label.setText(current_flashcard.get("Pinyin", ""))
 
 
 def main():
