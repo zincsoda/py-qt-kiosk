@@ -36,7 +36,7 @@ else:
 CHARACTERS_FILE = "characters.csv"
 MESSAGE_FILE = "message.txt"
 CHARACTER_UPDATE_INTERVAL = 10000  # 10 seconds
-DEFAULT_HEADER_TEXT = "There are no bad pictures - thats just how your face looks sometimes"
+DEFAULT_HEADER_TEXT = "" #There are no bad pictures - thats just how your face looks sometimes"
 
 
 def get_wlan_ipaddress() -> str:
