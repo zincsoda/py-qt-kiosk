@@ -1,16 +1,28 @@
-import sys, time
-from PyQt5.QtCore import Qt, QTimer, QTime, QDateTime
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
-import threading, time
+#!/usr/bin/env python3
+"""
+Character Display Kiosk Application
 
+A PyQt5-based kiosk application that displays Chinese characters with
+support for Discord message integration and network status display.
+"""
+
+import sys
+import os
+import csv
+import random
+import threading
+import time
 import socket
 import fcntl
 import struct
 import subprocess
-import csv
-import random
-import os
+from typing import List, Tuple
 
+from PyQt5.QtCore import Qt, QTimer, QDateTime
+from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+
+
+# Configuration
 RUN_ON_PI = False
 
 if RUN_ON_PI:
@@ -20,9 +32,16 @@ else:
     CLOCK_FONT_SIZE = 300
     FOOTER_FONT_SIZE = 50
 
-def get_wlan_ipaddress():
-    # Get the network interface associated with WiFi
-    ifname = 'wlan0'  # This assumes your WiFi interface is named 'wlan0'
+# Constants
+CHARACTERS_FILE = "characters.csv"
+MESSAGE_FILE = "message.txt"
+CHARACTER_UPDATE_INTERVAL = 10000  # 10 seconds
+DEFAULT_HEADER_TEXT = "There are no bad pictures - thats just how your face looks sometimes"
+
+
+def get_wlan_ipaddress() -> str:
+    """Get the IP address of the wlan0 interface (Raspberry Pi)."""
+    ifname = 'wlan0'
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     ip_address = socket.inet_ntoa(fcntl.ioctl(
         sock.fileno(),
@@ -31,28 +50,49 @@ def get_wlan_ipaddress():
     )[20:24])
     return ip_address
 
-# macOS
-def get_en0_ipaddress():
+
+def get_en0_ipaddress() -> str:
+    """Get the IP address of the en0 interface (macOS)."""
     ip_address = subprocess.check_output(['ipconfig', 'getifaddr', 'en0']).decode().strip()
     return ip_address
 
-class MainWindow(QWidget):
+
+def get_ip_address() -> str:
+    """Get the current IP address based on platform."""
+    try:
+        if RUN_ON_PI:
+            return get_wlan_ipaddress()
+        else:
+            return get_en0_ipaddress()
+    except Exception:
+        return "127.0.0.1"  # fallback to localhost
+
+
+class CharacterDisplay(QWidget):
+    """Main application window for displaying Chinese characters."""
+    
     def __init__(self):
         super().__init__()
         self.callback_done = threading.Event()
-        self.characters = []
-        self.read_csv_chars()
-        self.initUI()
-        self.update_character()
+        self.characters: List[Tuple[str, str]] = []
+        self.current_index: int = 0
+        
+        self._load_characters()
+        self._init_ui()
+        self._setup_timer()
+        self._update_character()
 
+    def _init_ui(self):
+        """Initialize the user interface."""
+        self._create_header_label()
+        self._create_character_label()
+        self._create_ip_address_label()
+        self._create_frame_label()
+        self._setup_layout()
+        self._setup_window_properties()
 
-    def initUI(self):
-
-        self.createHeaderLabel()
-        self.createcharacter_label()
-        self.createIPAddressLabel()
-        self.createFrameLabel()
-
+    def _setup_layout(self):
+        """Setup the main layout of the application."""
         header_layout = QHBoxLayout()
         header_layout.addWidget(self.header_label)
 
@@ -61,13 +101,16 @@ class MainWindow(QWidget):
         footer_layout.addStretch()
         footer_layout.addWidget(self.ip_label)
 
-        layout = QVBoxLayout()
-        layout.addLayout(header_layout)
-        layout.addWidget(self.character_label, 1)
-        layout.addLayout(footer_layout)  
-        self.setLayout(layout)
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(header_layout)
+        main_layout.addWidget(self.character_label, 1)
+        main_layout.addLayout(footer_layout)
+        
+        self.setLayout(main_layout)
 
-        # center the widget on the screen
+    def _setup_window_properties(self):
+        """Configure window properties for fullscreen kiosk mode."""
+        # Center the widget on the screen
         qr = self.frameGeometry()
         cp = QApplication.desktop().screenGeometry().center()
         qr.moveCenter(cp)
@@ -77,16 +120,43 @@ class MainWindow(QWidget):
         self.setStyleSheet("background-color: black;")
         self.setCursor(Qt.BlankCursor)
 
-    def read_csv_chars(self):
-        dirname = os.path.dirname(__file__) or '.'
-        f = open(dirname + "/" +  "characters.csv", "r")
-        csv_reader = csv.reader(f)
-        for row in csv_reader:
-            tup = (row[0], row[1])
-            self.characters.append(tup)
-        f.close()
+    def _setup_timer(self):
+        """Setup timer for character updates."""
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._update_character)
+        self.timer.start(CHARACTER_UPDATE_INTERVAL)
 
-    def createcharacter_label(self):
+    def _load_characters(self):
+        """Load characters from CSV file."""
+        dirname = os.path.dirname(__file__) or '.'
+        csv_path = os.path.join(dirname, CHARACTERS_FILE)
+        
+        try:
+            with open(csv_path, "r", encoding='utf-8') as f:
+                csv_reader = csv.reader(f)
+                for row in csv_reader:
+                    if len(row) >= 2:
+                        self.characters.append((row[0], row[1]))
+        except FileNotFoundError:
+            print(f"Warning: {CHARACTERS_FILE} not found")
+        except Exception as e:
+            print(f"Error loading characters: {e}")
+
+    def _create_header_label(self):
+        """Create and configure the header label."""
+        self.header_label = QLabel(self)
+        self.header_label.setText(DEFAULT_HEADER_TEXT)
+        self.header_label.setStyleSheet('color: lightblue')
+        self.header_label.setWordWrap(True)
+        self.header_label.setAlignment(Qt.AlignCenter)
+        self.header_label.resize(100, 20)
+
+        font = self.header_label.font()
+        font.setPointSize(FOOTER_FONT_SIZE)
+        self.header_label.setFont(font)
+
+    def _create_character_label(self):
+        """Create and configure the main character display label."""
         self.character_label = QLabel('', self)
         self.character_label.setAlignment(Qt.AlignCenter)
         font = self.character_label.font()
@@ -94,68 +164,64 @@ class MainWindow(QWidget):
         self.character_label.setFont(font)
         self.character_label.setStyleSheet('color: white')
 
-        # Create a timer that updates the clock every second
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_character)
-        self.timer.start(10000)
-
-
-    def createHeaderLabel(self):
-        self.header_label = QLabel(self)
-        self.header_label.setText("There are no bad pictures - thats just how your face looks sometimes")
-        self.header_label.setStyleSheet('color: lightblue')
-        self.header_label.setWordWrap(True)
-        self.header_label.setAlignment(Qt.AlignCenter)
-        self.header_label.resize(100, 20)
-
-        font = self.header_label.font() # get the current font
-        font.setPointSize(FOOTER_FONT_SIZE)
-        self.header_label.setFont(font)
-
-    def createIPAddressLabel(self):
+    def _create_ip_address_label(self):
+        """Create and configure the IP address label."""
         self.ip_label = QLabel(self)
-        try:
-            if RUN_ON_PI:
-                ip_address = get_wlan_ipaddress()
-            else:
-                ip_address = get_en0_ipaddress()
-        except:
-            ip_address = "127.0.0.1"  # fallback to localhost
-        self.ip_label.setText(ip_address)
+        self.ip_label.setText(get_ip_address())
         self.ip_label.setStyleSheet('color: pink')
-        font = self.ip_label.font() # get the current font
+        font = self.ip_label.font()
         font.setPointSize(FOOTER_FONT_SIZE)
         self.ip_label.setFont(font)
 
-    def createFrameLabel(self):
-        self.frame_label = QLabel("...",self)
+    def _create_frame_label(self):
+        """Create and configure the frame label."""
+        self.frame_label = QLabel("...", self)
         self.frame_label.setStyleSheet('color: green')
-        font = self.frame_label.font() # get the current font
+        font = self.frame_label.font()
         font.setPointSize(FOOTER_FONT_SIZE)
         self.frame_label.setFont(font)
-        self.end_time = QDateTime(2024, 9, 15, 9, 0)  # May 11th 2023, 7pm
+        self.end_time = QDateTime(2024, 9, 15, 9, 0)
 
-    def update_character(self):
+    def _update_character(self):
+        """Update the displayed character and check for new messages."""
+        self._check_for_message()
+        self._display_random_character()
 
-        # Check for discord message
-        self.checkForMessage()
+    def _check_for_message(self):
+        """Check for and display new messages from Discord."""
+        dirname = os.path.dirname(__file__) or '.'
+        message_path = os.path.join(dirname, MESSAGE_FILE)
+        
+        try:
+            with open(message_path, "r", encoding='utf-8') as f:
+                message = f.readline().strip()
+                if message:
+                    self.header_label.setText(message)
+        except FileNotFoundError:
+            # Keep default message if file doesn't exist
+            pass
+        except Exception as e:
+            print(f"Error reading message file: {e}")
 
-        # Choose next character
-        self.index = random.randrange(len(self.characters))
-        current_character = self.characters[self.index][1]
-        current_frame = self.characters[self.index][0]
+    def _display_random_character(self):
+        """Display a random character from the loaded list."""
+        if not self.characters:
+            return
+            
+        self.current_index = random.randrange(len(self.characters))
+        current_frame, current_character = self.characters[self.current_index]
+        
         self.character_label.setText(current_character)
         self.frame_label.setText(current_frame)
 
-    def checkForMessage(self):
-        dirname = os.path.dirname(__file__) or '.'
-        f = open(dirname + "/" +  "message.txt", "r")
-        message = f.readline()
-        self.header_label.setText(message)
-        f.close()
+
+def main():
+    """Main application entry point."""
+    app = QApplication(sys.argv)
+    window = CharacterDisplay()
+    sys.exit(app.exec_())
+
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = MainWindow()
-    sys.exit(app.exec_())
+    main()
 
